@@ -17,10 +17,33 @@
 #include <BLEServer.h> 
 #include <BLE2902.h>
 
+
+
+/////////////////////////////////////////////////////
+// LED Code
+/////////////////////////////////////////////////////
+#include <Adafruit_NeoPixel.h>
+
+#define LED_PIN 13
+#define NUMPIXELS 24
+#define PURPLE pixels.Color(128, 0, 128 )
+#define RED pixels.Color(255, 0, 0)
+#define GREEN pixels.Color(0, 255, 0)
+
+Adafruit_NeoPixel pixels(NUMPIXELS, LED_PIN, NEO_GRB + NEO_KHZ800);
+
+void setLEDColor(uint32_t color) {
+  for (int i = 0; i < NUMPIXELS; i++)
+  {
+    pixels.setPixelColor(i, color);
+  }
+  pixels.show();
+}
+
+/// SERVO Code
 Servo servo;
 int pos = 0; 
 int servoPin = 33;
-
 
 /////////////////////////////////////////////////////
 // BLE Code
@@ -164,8 +187,12 @@ void setup()
 
   setupBle();
 
-  setupDistanceSensor();
+  pixels.begin();
+  pixels.clear();
 
+  setLEDColor(PURPLE);
+
+  setupDistanceSensor();
   servo.attach(servoPin); 
 }
 
@@ -184,9 +211,13 @@ void loop()
     commandsReceived++;
     command = 90;
     distanceCommandReceived = true;
+      setLEDColor(RED);
+
   } else if (distanceCommandReceived == true) {
     command = 0;
     commandsReceived++;
+      setLEDColor(GREEN);
+  
   }
 
   if (commandsReceived > 0) {
