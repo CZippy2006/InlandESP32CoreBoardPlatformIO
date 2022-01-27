@@ -11,12 +11,13 @@
  */
 #include <Arduino.h>
 #include <ESP32Servo.h>
-#include <BLEDevice.h> 
-#include <BLEUtils.h>  
-#include <BLEServer.h> 
+#include <BLEDevice.h>
+#include <BLEUtils.h>
+#include <BLEServer.h>
 #include <BLE2902.h>
 
-
+#define TRIGGER_DISTANCE 14
+uint8_t triggerDistance = TRIGGER_DISTANCE;
 
 /////////////////////////////////////////////////////
 // LED Code
@@ -25,13 +26,14 @@
 
 #define LED_PIN 13
 #define NUMPIXELS 24
-#define PURPLE pixels.Color(128, 0, 128 )
+#define PURPLE pixels.Color(128, 0, 128)
 #define RED pixels.Color(255, 0, 0)
 #define GREEN pixels.Color(0, 255, 0)
 
 Adafruit_NeoPixel pixels(NUMPIXELS, LED_PIN, NEO_GRB + NEO_KHZ800);
 
-void setLEDColor(uint32_t color) {
+void setLEDColor(uint32_t color)
+{
   for (int i = 0; i < NUMPIXELS; i++)
   {
     pixels.setPixelColor(i, color);
@@ -41,7 +43,7 @@ void setLEDColor(uint32_t color) {
 
 /// SERVO Code
 Servo servo;
-int pos = 0; 
+int pos = 0;
 int servoPin = 33;
 
 /////////////////////////////////////////////////////
@@ -53,7 +55,7 @@ uint8_t commandsReceived = 0;
 int16_t command = 0;
 
 // For Bluetooth Low Energy, give the device a name
-#define DEVICENAME  "ROBOBOB"
+#define DEVICENAME "ROBOBOB"
 
 // Give the service and characterists UUIDs generated with uuidgen
 #define SERVO_SERVICE "7a2d44ce-a094-46f2-9988-2f8d606e4764"
@@ -75,7 +77,7 @@ class BleCallbacks : public BLECharacteristicCallbacks
   {
     // Read the value received in the characteristic
     std::string value = pCharacteristic->getValue();
-    
+
     // For debug purposes print the received value
     Serial.println("write Bluetooth characteristic called");
 
@@ -84,17 +86,15 @@ class BleCallbacks : public BLECharacteristicCallbacks
 
     Serial.println("Command Received");
     Serial.println(commandChar);
-    command = atoi(commandChar);
-
-    // For now simply assume the command is a direction and step
-    commandsReceived++;
+    triggerDistance = atoi(commandChar);
   }
 
   /**
    * @brief Callback for a read
    * 
    */
-  void onRead(BLECharacteristic *pCharacteristic) {
+  void onRead(BLECharacteristic *pCharacteristic)
+  {
     Serial.println("Read received");
   }
 };
@@ -103,7 +103,8 @@ class BleCallbacks : public BLECharacteristicCallbacks
  * @brief Setup the BLE service for both moving the servo
  * 
  */
-void setupBle() {
+void setupBle()
+{
   BLEDevice::init(DEVICENAME);
   BLEServer *pServer = BLEDevice::createServer();
 
@@ -112,7 +113,7 @@ void setupBle() {
   // We will only setup write
   BLECharacteristic *pCharacteristic = pServoService->createCharacteristic(
       SERVO_CHARACTERISTIC,
-      BLECharacteristic::PROPERTY_WRITE|BLECharacteristic::PROPERTY_READ);
+      BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_READ);
 
   pCharacteristic->setCallbacks(new BleCallbacks());
 
@@ -124,7 +125,7 @@ void setupBle() {
   esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_ADV, ESP_PWR_LVL_P9);
   BLEAdvertising *pAdvertising = pServer->getAdvertising();
   pAdvertising->addServiceUUID(SERVO_SERVICE);
-  pAdvertising->start();  
+  pAdvertising->start();
 }
 
 /////////////////////////////////////////////////////
@@ -137,13 +138,13 @@ long duration = 0; // Variable for the duration of sound wave travel
 int distance = 0;  // Distance Calculation
 long lastDistanceReadTimestamp = 0;
 uint8_t distanceCommandReceived = false;
-#define TRIGGER_DISTANCE 14
 
 /**
  * @brief Setup the pins for the distance sensor
  * 
  */
-void setupDistanceSensor() {
+void setupDistanceSensor()
+{
   pinMode(trigPin, OUTPUT);
   pinMode(echoPin, INPUT);
 }
@@ -153,7 +154,8 @@ void setupDistanceSensor() {
  * 
  * @return int 
  */
-int measureDistance() {
+int measureDistance()
+{
   // Clear the trigger pin
   digitalWrite(trigPin, LOW);
   delayMicroseconds(2);
@@ -192,7 +194,7 @@ void setup()
   setLEDColor(PURPLE);
 
   setupDistanceSensor();
-  servo.attach(servoPin); 
+  servo.attach(servoPin);
 }
 
 /**
@@ -202,32 +204,35 @@ void setup()
 void loop()
 {
   // Only measure the distance every 200mS
-  if ((millis() - lastDistanceReadTimestamp) > 200) {
+  if ((millis() - lastDistanceReadTimestamp) > 200)
+  {
     Serial.println(measureDistance());
   }
 
-  if (distance <= TRIGGER_DISTANCE) {
+  if (distance <= triggerDistance)
+  {
     commandsReceived++;
     command = 90;
     distanceCommandReceived = true;
-      setLEDColor(RED);
-
-  } else if (distanceCommandReceived == true) {
+    setLEDColor(GREEN);
+  }
+  else if (distanceCommandReceived == true)
+  {
     command = 0;
     commandsReceived++;
-      setLEDColor(GREEN);
-  
+    setLEDColor(RED);
   }
 
-  if (commandsReceived > 0) {
-    if (commandsReceived > 1) {
+  if (commandsReceived > 0)
+  {
+    if (commandsReceived > 1)
+    {
       Serial.println("Commands being dropped, coming too quickly");
     }
     servo.write(command); 
 
     // Delay to allow servo move to complete
     delay(1000);
-
     command = 0;
     commandsReceived = 0;
   }
