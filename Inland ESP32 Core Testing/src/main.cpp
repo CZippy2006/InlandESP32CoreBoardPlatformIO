@@ -1,6 +1,6 @@
 /**
  * @file main.cpp
- * @author John Astill
+ * @author Christian Astill
  * @brief Inland ESP32 setup and testing for Servos and BLE. Used as a template for other projects.
  * @version 0.1
  * @date 2022-01-23
@@ -11,7 +11,6 @@
  */
 #include <Arduino.h>
 #include <ESP32Servo.h>
-
 #include <BLEDevice.h> 
 #include <BLEUtils.h>  
 #include <BLEServer.h> 
@@ -138,7 +137,7 @@ long duration = 0; // Variable for the duration of sound wave travel
 int distance = 0;  // Distance Calculation
 long lastDistanceReadTimestamp = 0;
 uint8_t distanceCommandReceived = false;
-#define TRIGGER_DISTANCE 7
+#define TRIGGER_DISTANCE 14
 
 /**
  * @brief Setup the pins for the distance sensor
